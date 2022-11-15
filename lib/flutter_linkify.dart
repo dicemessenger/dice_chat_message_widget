@@ -1,6 +1,5 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:linkify/linkify.dart';
 
 export 'package:linkify/linkify.dart'
@@ -14,6 +13,70 @@ export 'package:linkify/linkify.dart'
         UrlLinkifier,
         EmailElement,
         EmailLinkifier;
+
+final userTagRegex = RegExp(
+  r'^(.*?)(?<![\w@])@([\w@]+(?:[.!][\w@]+)*)',
+  caseSensitive: false,
+  dotAll: true,
+);
+
+class UserTagLinkifier extends Linkifier {
+  const UserTagLinkifier();
+
+  @override
+  List<LinkifyElement> parse(elements, options) {
+    final list = <LinkifyElement>[];
+
+    elements.forEach((element) {
+      if (element is TextElement) {
+        final match = userTagRegex.firstMatch(element.text);
+
+        if (match == null) {
+          list.add(element);
+        } else {
+          final text = element.text.replaceFirst(match.group(0)!, '');
+
+          if (match.group(1)?.isNotEmpty == true) {
+            list.add(TextElement(match.group(1)!));
+          }
+
+          if (match.group(2)?.isNotEmpty == true) {
+            list.add(UserTagElement('@${match.group(2)!}'));
+          }
+
+          if (text.isNotEmpty) {
+            list.addAll(parse([TextElement(text)], options));
+          }
+        }
+      } else {
+        list.add(element);
+      }
+    });
+
+    return list;
+  }
+}
+
+/// Represents an element containing an user tag
+class UserTagElement extends LinkableElement {
+  final String userTag;
+
+  UserTagElement(this.userTag) : super(userTag, userTag);
+
+  @override
+  String toString() {
+    return "UserTagElement: '$userTag' ($text)";
+  }
+
+  @override
+  bool operator ==(other) => equals(other);
+
+  @override
+  bool equals(other) =>
+      other is UserTagElement &&
+      super.equals(other) &&
+      other.userTag == userTag;
+}
 
 /// Callback clicked link
 typedef LinkCallback = void Function(LinkableElement link);
@@ -39,6 +102,9 @@ class Linkify extends StatelessWidget {
 
   /// Style of link text
   final TextStyle? linkStyle;
+
+  /// Style of tag text
+  final TextStyle? tagStyle;
 
   // Text.rich
 
@@ -82,6 +148,7 @@ class Linkify extends StatelessWidget {
     // TextSpan
     this.style,
     this.linkStyle,
+    this.tagStyle,
     // RichText
     this.textAlign = TextAlign.start,
     this.textDirection,
@@ -108,6 +175,15 @@ class Linkify extends StatelessWidget {
         elements,
         style: Theme.of(context).textTheme.bodyText2?.merge(style),
         onOpen: onOpen,
+        tagStyle: Theme.of(context)
+            .textTheme
+            .bodyText2
+            ?.merge(style)
+            .copyWith(
+          color: Colors.blueAccent,
+          decoration: TextDecoration.underline,
+        )
+            .merge(tagStyle),
         useMouseRegion: true,
         linkStyle: Theme.of(context)
             .textTheme
@@ -157,6 +233,9 @@ class SelectableLinkify extends StatelessWidget {
 
   /// Style of link text
   final TextStyle? linkStyle;
+
+  /// Style of tag text
+  final TextStyle? tagStyle;
 
   // Text.rich
 
@@ -234,6 +313,7 @@ class SelectableLinkify extends StatelessWidget {
     // TextSpan
     this.style,
     this.linkStyle,
+    this.tagStyle,
     // RichText
     this.textAlign,
     this.textDirection,
@@ -273,6 +353,15 @@ class SelectableLinkify extends StatelessWidget {
         elements,
         style: Theme.of(context).textTheme.bodyText2?.merge(style),
         onOpen: onOpen,
+        tagStyle: Theme.of(context)
+            .textTheme
+            .bodyText2
+            ?.merge(style)
+            .copyWith(
+          color: Colors.blueAccent,
+          decoration: TextDecoration.underline,
+        )
+            .merge(tagStyle),
         linkStyle: Theme.of(context)
             .textTheme
             .bodyText2
@@ -328,6 +417,7 @@ TextSpan buildTextSpan(
   List<LinkifyElement> elements, {
   TextStyle? style,
   TextStyle? linkStyle,
+  TextStyle? tagStyle,
   LinkCallback? onOpen,
   bool useMouseRegion = false,
 }) {
@@ -340,15 +430,23 @@ TextSpan buildTextSpan(
               mouseCursor: SystemMouseCursors.click,
               inlineSpan: TextSpan(
                 text: element.text,
-                style: linkStyle,
-                recognizer: onOpen != null ? (TapGestureRecognizer()..onTap = () => onOpen(element)) : null,
+                style: element is UserTagElement
+                    ? tagStyle ?? linkStyle
+                    : linkStyle,
+                recognizer: onOpen != null
+                    ? (TapGestureRecognizer()..onTap = () => onOpen(element))
+                    : null,
               ),
             );
           } else {
             return TextSpan(
               text: element.text,
-              style: linkStyle,
-              recognizer: onOpen != null ? (TapGestureRecognizer()..onTap = () => onOpen(element)) : null,
+              style: element is UserTagElement
+                  ? tagStyle ?? linkStyle
+                  : linkStyle ,
+              recognizer: onOpen != null
+                  ? (TapGestureRecognizer()..onTap = () => onOpen(element))
+                  : null,
             );
           }
         } else {
