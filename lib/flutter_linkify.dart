@@ -304,6 +304,9 @@ class SelectableLinkify extends StatelessWidget {
   /// Called when the user changes the selection of text (including the cursor location).
   final SelectionChangedCallback? onSelectionChanged;
 
+
+  final double maxWidth;
+
   const SelectableLinkify({
     Key? key,
     required this.text,
@@ -316,6 +319,7 @@ class SelectableLinkify extends StatelessWidget {
     this.tagStyle,
     // RichText
     this.textAlign,
+    this.maxWidth = 220,
     this.textDirection,
     this.minLines,
     this.maxLines,
@@ -334,6 +338,7 @@ class SelectableLinkify extends StatelessWidget {
     this.onTap,
     this.scrollPhysics,
     this.textWidthBasis,
+
     this.textHeightBehavior,
     this.cursorHeight,
     this.selectionControls,
@@ -348,10 +353,6 @@ class SelectableLinkify extends StatelessWidget {
       linkifiers: linkifiers,
     );
 
-
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
         var textSpan = buildTextSpan(
           elements,
           style: Theme.of(context).textTheme.bodyText2?.merge(style),
@@ -377,7 +378,7 @@ class SelectableLinkify extends StatelessWidget {
         );
         final span = textSpan;
         final tp = TextPainter(text: span,textDirection: TextDirection.ltr);
-        tp.layout(maxWidth: constraints.maxWidth);
+        tp.layout(maxWidth: maxWidth);
         var numOfLines = tp.computeLineMetrics().length;
         print('numOfLines: $numOfLines');
         bool isLongText = numOfLines > 11;
@@ -407,8 +408,8 @@ class SelectableLinkify extends StatelessWidget {
           selectionControls: selectionControls,
           onSelectionChanged: onSelectionChanged,
         );
-      }
-    );
+
+
   }
 }
 
