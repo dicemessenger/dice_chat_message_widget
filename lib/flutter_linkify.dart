@@ -348,52 +348,66 @@ class SelectableLinkify extends StatelessWidget {
       linkifiers: linkifiers,
     );
 
-    return SelectableText.rich(
-      buildTextSpan(
-        elements,
-        style: Theme.of(context).textTheme.bodyText2?.merge(style),
-        onOpen: onOpen,
-        tagStyle: Theme.of(context)
-            .textTheme
-            .bodyText2
-            ?.merge(style)
-            .copyWith(
-          color: Colors.blueAccent,
-          decoration: TextDecoration.underline,
-        )
-            .merge(tagStyle),
-        linkStyle: Theme.of(context)
-            .textTheme
-            .bodyText2
-            ?.merge(style)
-            .copyWith(
-              color: Colors.blueAccent,
-              decoration: TextDecoration.underline,
-            )
-            .merge(linkStyle),
-      ),
-      textAlign: textAlign,
-      textDirection: textDirection,
-      minLines: minLines,
-      maxLines: maxLines,
-      focusNode: focusNode,
-      strutStyle: strutStyle,
-      showCursor: showCursor,
-      textScaleFactor: textScaleFactor,
-      autofocus: autofocus,
-      toolbarOptions: toolbarOptions,
-      cursorWidth: cursorWidth,
-      cursorRadius: cursorRadius,
-      cursorColor: cursorColor,
-      dragStartBehavior: dragStartBehavior,
-      enableInteractiveSelection: enableInteractiveSelection,
-      onTap: onTap,
-      scrollPhysics: scrollPhysics,
-      textWidthBasis: textWidthBasis,
-      textHeightBehavior: textHeightBehavior,
-      cursorHeight: cursorHeight,
-      selectionControls: selectionControls,
-      onSelectionChanged: onSelectionChanged,
+
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        var textSpan = buildTextSpan(
+          elements,
+          style: Theme.of(context).textTheme.bodyText2?.merge(style),
+          onOpen: onOpen,
+          tagStyle: Theme.of(context)
+              .textTheme
+              .bodyText2
+              ?.merge(style)
+              .copyWith(
+            color: Colors.blueAccent,
+            decoration: TextDecoration.underline,
+          )
+              .merge(tagStyle),
+          linkStyle: Theme.of(context)
+              .textTheme
+              .bodyText2
+              ?.merge(style)
+              .copyWith(
+            color: Colors.blueAccent,
+            decoration: TextDecoration.underline,
+          )
+              .merge(linkStyle),
+        );
+        final span = textSpan;
+        final tp = TextPainter(text: span,textDirection: TextDirection.ltr);
+        tp.layout(maxWidth: constraints.maxWidth);
+        var numOfLines = tp.computeLineMetrics().length;
+        print('numOfLines: $numOfLines');
+        bool isLongText = numOfLines > 11;
+
+        return SelectableText.rich(
+          textSpan,
+          textAlign: textAlign,
+          textDirection: textDirection,
+          minLines: minLines,
+          maxLines: maxLines,
+          focusNode: focusNode,
+          strutStyle: strutStyle,
+          showCursor: showCursor,
+          textScaleFactor: textScaleFactor,
+          autofocus: autofocus,
+          toolbarOptions: toolbarOptions,
+          cursorWidth: cursorWidth,
+          cursorRadius: cursorRadius,
+          cursorColor: cursorColor,
+          dragStartBehavior: dragStartBehavior,
+          enableInteractiveSelection: enableInteractiveSelection,
+          onTap: onTap,
+          scrollPhysics: scrollPhysics,
+          textWidthBasis: textWidthBasis,
+          textHeightBehavior: textHeightBehavior,
+          cursorHeight: cursorHeight,
+          selectionControls: selectionControls,
+          onSelectionChanged: onSelectionChanged,
+        );
+      }
     );
   }
 }
