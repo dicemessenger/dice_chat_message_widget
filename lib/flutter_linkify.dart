@@ -210,7 +210,7 @@ class Linkify extends StatelessWidget {
 }
 
 /// Turns URLs into links
-class SelectableLinkify extends StatelessWidget {
+class SelectableLinkify extends StatefulWidget {
   /// Text to be linkified
   final String text;
 
@@ -236,6 +236,9 @@ class SelectableLinkify extends StatelessWidget {
 
   /// Style of tag text
   final TextStyle? tagStyle;
+
+  /// Style of Read more tex
+  final TextStyle? readMoreStyle;
 
   // Text.rich
 
@@ -307,6 +310,12 @@ class SelectableLinkify extends StatelessWidget {
 
   final double maxWidth;
 
+  final int trimLines;
+
+  
+
+
+
   const SelectableLinkify({
     Key? key,
     required this.text,
@@ -317,6 +326,8 @@ class SelectableLinkify extends StatelessWidget {
     this.style,
     this.linkStyle,
     this.tagStyle,
+    this.trimLines = 11,
+    this.readMoreStyle,
     // RichText
     this.textAlign,
     this.maxWidth = 220,
@@ -346,71 +357,235 @@ class SelectableLinkify extends StatelessWidget {
   }) : super(key: key);
 
   @override
-  Widget build(BuildContext context) {
+  State<SelectableLinkify> createState() => _SelectableLinkifyState();
+}
+
+class _SelectableLinkifyState extends State<SelectableLinkify> {
+   final String _kEllipsis = '\u2026';
+
+   final String _kLineSeparator = '\u2028';
+  late int maxLines, minLines;
+  bool _readMore = false;
+
+
+  @override
+  void initState() {
+    maxLines = widget.maxLines ?? 11;
+    minLines = widget.minLines ?? 11;
     final elements = linkify(
-      text,
-      options: options,
-      linkifiers: linkifiers,
+      widget.text,
+      options: widget.options,
+      linkifiers: widget.linkifiers,
     );
 
-        var textSpan = buildTextSpan(
+
+    super.initState();
+  }
+
+
+   void _onTapLink() {
+     setState(() {
+       _readMore = !_readMore;
+       // widget.callback?.call(_readMore);
+     });
+   }
+
+
+   @override
+  Widget build(BuildContext context) {
+    final elements = linkify(
+      widget.text,
+      options: widget.options,
+      linkifiers: widget.linkifiers,
+    );
+
+    var link = TextSpan(
+      text: _readMore ? "Read more" : "Read less",
+      style: widget.readMoreStyle,
+      recognizer: TapGestureRecognizer()..onTap = _onTapLink,
+    );
+    var _delimiter = TextSpan(
+      text: _readMore
+          ? _kEllipsis
+          : '',
+      style: widget.style,
+      recognizer: TapGestureRecognizer()..onTap = _onTapLink,
+    );
+
+    final maxWidth = widget.maxWidth;
+    TextSpan? preTextSpan;
+    TextSpan? postTextSpan;
+
+    var text = buildTextSpan(
           elements,
-          style: Theme.of(context).textTheme.bodyText2?.merge(style),
-          onOpen: onOpen,
+          style: Theme.of(context).textTheme.bodyText2?.merge(widget.style),
+          onOpen: widget.onOpen,
           tagStyle: Theme.of(context)
               .textTheme
               .bodyText2
-              ?.merge(style)
+              ?.merge(widget.style)
               .copyWith(
             color: Colors.blueAccent,
             decoration: TextDecoration.underline,
           )
-              .merge(tagStyle),
+              .merge(widget.tagStyle),
           linkStyle: Theme.of(context)
               .textTheme
               .bodyText2
-              ?.merge(style)
+              ?.merge(widget.style)
               .copyWith(
             color: Colors.blueAccent,
             decoration: TextDecoration.underline,
           )
-              .merge(linkStyle),
+              .merge(widget.linkStyle),
         );
-        final span = textSpan;
-        final tp = TextPainter(text: span,textDirection: TextDirection.ltr);
-        tp.layout(maxWidth: maxWidth);
-        var numOfLines = tp.computeLineMetrics().length;
-        print('numOfLines: $numOfLines');
-        bool isLongText = numOfLines > 11;
+
+    var textPainter = TextPainter(
+      text: link,
+      textAlign: widget.textAlign ?? TextAlign.left,
+      textDirection: widget.textDirection,
+      textScaleFactor: widget.textScaleFactor,
+      maxLines: widget.trimLines,
+      ellipsis: widget.style?.overflow == TextOverflow.ellipsis ? _kEllipsis : null,
+      // locale: widget,
+    );
+    textPainter.layout(minWidth: 0, maxWidth: maxWidth);
+    final linkSize = textPainter.size;
+
+    // Layout and measure delimiter
+    textPainter.text = _delimiter;
+    textPainter.layout(minWidth: 0, maxWidth: maxWidth);
+    final delimiterSize = textPainter.size;
+
+    // Layout and measure text
+    textPainter.text = text;
+
+    /// modified minWidth to 0
+    textPainter.layout(minWidth: 0, maxWidth: maxWidth);
+    final textSize = textPainter.size;
+
+    // Get the endIndex of data
+    bool linkLongerThanLine = false;
+    int endIndex;
+
+    if (linkSize.width < maxWidth) {
+      final readMoreSize = linkSize.width + delimiterSize.width;
+      final pos = textPainter.getPositionForOffset(Offset(
+        widget.textDirection == TextDirection.rtl
+            ? readMoreSize
+            : textSize.width - readMoreSize,
+        textSize.height,
+      ));
+      endIndex = textPainter.getOffsetBefore(pos.offset) ?? 0;
+    } else {
+      var pos = textPainter.getPositionForOffset(
+        textSize.bottomLeft(Offset.zero),
+      );
+      endIndex = pos.offset;
+      linkLongerThanLine = true;
+    }
+    var textSpan;
+    if (textPainter.didExceedMaxLines) {
+      var data= _readMore
+          ? widget.text.substring(0, endIndex) +
+          (linkLongerThanLine ? _kLineSeparator : '')
+          : widget.text;
+      final elements = linkify(
+        data,
+        options: widget.options,
+        linkifiers: widget.linkifiers,
+      );
+
+      textSpan = buildTextSpan(
+        elements,
+        style: Theme.of(context).textTheme.bodyText2?.merge(widget.style),
+        onOpen: widget.onOpen,
+        tagStyle: Theme.of(context)
+            .textTheme
+            .bodyText2
+            ?.merge(widget.style)
+            .copyWith(
+          color: Colors.blueAccent,
+          decoration: TextDecoration.underline,
+        )
+            .merge(widget.tagStyle),
+        linkStyle: Theme.of(context)
+            .textTheme
+            .bodyText2
+            ?.merge(widget.style)
+            .copyWith(
+          color: Colors.blueAccent,
+          decoration: TextDecoration.underline,
+        )
+            .merge(widget.linkStyle),
+        children: [_delimiter, link],
+
+        // useMouseRegion: widget.,
+      );
+    } else {
+      var data= widget.text;
+      final elements = linkify(
+        data,
+        options: widget.options,
+        linkifiers: widget.linkifiers,
+      );
+
+      textSpan = buildTextSpan(
+        elements,
+        style: Theme.of(context).textTheme.bodyText2?.merge(widget.style),
+        onOpen: widget.onOpen,
+        tagStyle: Theme.of(context)
+            .textTheme
+            .bodyText2
+            ?.merge(widget.style)
+            .copyWith(
+          color: Colors.blueAccent,
+          decoration: TextDecoration.underline,
+        )
+            .merge(widget.tagStyle),
+        linkStyle: Theme.of(context)
+            .textTheme
+            .bodyText2
+            ?.merge(widget.style)
+            .copyWith(
+          color: Colors.blueAccent,
+          decoration: TextDecoration.underline,
+        )
+            .merge(widget.linkStyle),
+        children: [],
+
+        // useMouseRegion: widget.,
+      );
+    }
 
         return SelectableText.rich(
           textSpan,
-          textAlign: textAlign,
-          textDirection: textDirection,
-          minLines: minLines,
-          maxLines: maxLines,
-          focusNode: focusNode,
-          strutStyle: strutStyle,
-          showCursor: showCursor,
-          textScaleFactor: textScaleFactor,
-          autofocus: autofocus,
-          toolbarOptions: toolbarOptions,
-          cursorWidth: cursorWidth,
-          cursorRadius: cursorRadius,
-          cursorColor: cursorColor,
-          dragStartBehavior: dragStartBehavior,
-          enableInteractiveSelection: enableInteractiveSelection,
-          onTap: onTap,
-          scrollPhysics: scrollPhysics,
-          textWidthBasis: textWidthBasis,
-          textHeightBehavior: textHeightBehavior,
-          cursorHeight: cursorHeight,
-          selectionControls: selectionControls,
-          onSelectionChanged: onSelectionChanged,
+          textAlign: widget.textAlign,
+          textDirection: widget.textDirection,
+          minLines: widget.minLines,
+          maxLines: widget.maxLines,
+          focusNode: widget.focusNode,
+          strutStyle: widget.strutStyle,
+          showCursor: widget.showCursor,
+          textScaleFactor: widget.textScaleFactor,
+          autofocus: widget.autofocus,
+          toolbarOptions: widget.toolbarOptions,
+          cursorWidth: widget.cursorWidth,
+          cursorRadius: widget.cursorRadius,
+          cursorColor: widget.cursorColor,
+          dragStartBehavior: widget.dragStartBehavior,
+          enableInteractiveSelection: widget.enableInteractiveSelection,
+          onTap: widget.onTap,
+          scrollPhysics: widget.scrollPhysics,
+          textWidthBasis: widget.textWidthBasis,
+          textHeightBehavior: widget.textHeightBehavior,
+          cursorHeight: widget.cursorHeight,
+          selectionControls: widget.selectionControls,
+          onSelectionChanged: widget.onSelectionChanged,
         );
 
-
   }
+
 }
 
 class LinkableSpan extends WidgetSpan {
@@ -434,9 +609,10 @@ TextSpan buildTextSpan(
   TextStyle? linkStyle,
   TextStyle? tagStyle,
   LinkCallback? onOpen,
-  bool useMouseRegion = false,
+  bool useMouseRegion = false, List<TextSpan> children= const [],
 }) {
   return TextSpan(
+
     children: elements.map<InlineSpan>(
       (element) {
         if (element is LinkableElement) {
@@ -471,6 +647,6 @@ TextSpan buildTextSpan(
           );
         }
       },
-    ).toList(),
+    ).toList()..addAll(children),
   );
 }
