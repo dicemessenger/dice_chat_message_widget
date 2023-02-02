@@ -311,7 +311,6 @@ class SelectableLinkify extends StatefulWidget {
   final double maxWidth;
 
   final int trimLines;
-
   
 
 
@@ -443,7 +442,7 @@ class _SelectableLinkifyState extends State<SelectableLinkify> {
     var textPainter = TextPainter(
       text: link,
       textAlign: widget.textAlign ?? TextAlign.left,
-      textDirection: widget.textDirection,
+      textDirection: widget.textDirection ?? TextDirection.ltr,
       textScaleFactor: widget.textScaleFactor,
       maxLines: widget.trimLines,
       ellipsis: widget.style?.overflow == TextOverflow.ellipsis ? _kEllipsis : null,
