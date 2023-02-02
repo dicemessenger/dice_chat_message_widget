@@ -364,7 +364,7 @@ class _SelectableLinkifyState extends State<SelectableLinkify> {
 
    final String _kLineSeparator = '\u2028';
   late int maxLines, minLines;
-  bool _readMore = false;
+  bool _readMore = true;
 
 
   @override
@@ -399,7 +399,7 @@ class _SelectableLinkifyState extends State<SelectableLinkify> {
     );
 
     var link = TextSpan(
-      text: _readMore ? "Read more" : "Read less",
+      text: _readMore ? '  Read more' : '',
       style: widget.readMoreStyle,
       recognizer: TapGestureRecognizer()..onTap = _onTapLink,
     );
@@ -412,8 +412,6 @@ class _SelectableLinkifyState extends State<SelectableLinkify> {
     );
 
     final maxWidth = widget.maxWidth;
-    TextSpan? preTextSpan;
-    TextSpan? postTextSpan;
 
     var text = buildTextSpan(
           elements,
